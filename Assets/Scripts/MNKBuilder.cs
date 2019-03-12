@@ -2,13 +2,20 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using UnityEngine.UI;
 
 public class MNKBuilder : MonoBehaviour {
 	private int amount=5;
     private double[,] matrix;
     private int[] mask;
-    private int basis = 4;
-	public DotController d1, d2, d3, d4, d5;
+    private int basis = 3;
+
+    public string Basis{
+        get;
+        set;
+    }
+
+	public DotController[] dots;
 
 	// Use this for initialization
 	void Start () {
@@ -17,7 +24,7 @@ public class MNKBuilder : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		
+
 	}
  
 	private double[,] MakeSystem(double[,] xyTable, int basis)
@@ -123,23 +130,26 @@ public class MNKBuilder : MonoBehaviour {
         print(str);
     }
 
+    private void DrawGraph(){
+
+    }
+
     private double[] BuildCoefs(){
+        Int32.TryParse(Basis, out basis);
+        if(basis<0)
+            throw new Exception("Basis can't be less than 0!");
+        basis++;
         double[,] xyTable = new double[2, 5];
-		xyTable[0, 0] = 1;
-		xyTable[0, 1] = toY(d1.transform.position.y);
-		xyTable[0, 1] = 2;
-		xyTable[1, 1] = toY(d2.transform.position.y);
-		xyTable[0, 2] = 3;
-		xyTable[1, 2] = toY(d3.transform.position.y);
-		xyTable[0, 3] = 4;
-		xyTable[1, 3] = toY(d4.transform.position.y);
-		xyTable[0, 4] = 5;
-		xyTable[1, 4] = toY(d5.transform.position.y);
+        for(int i=0; i<5; i++)
+        {
+            xyTable[0,i] = i+1;
+            xyTable[1,i] = toY(dots[i].transform.position.y);
+        }
         this.matrix = MakeSystem(xyTable, basis);
         return Gauss(basis, basis + 1);
     }
 
 	double toY(float y){
-		return 10 * (y+2.05/6.45);
+		return 10 * ((y+2.05)/6.45);
 	}
 }
