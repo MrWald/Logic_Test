@@ -4,29 +4,66 @@ using UnityEngine;
 using System;
 using UnityEngine.UI;
 
-public class MNKBuilder : MonoBehaviour {
-	private int amount=5;
+public class GraphBuilder : MonoBehaviour 
+{
     private double[,] matrix;
+
+    private int amount=5;
+
     private int[] mask;
+
     private int basis = 3;
 
-    public string Basis{
-        get;
-        set;
+    public UnityEngine.Object DotPrefabMNK, DotPrefabLagrange;
+
+    public DotController[] dots;
+
+    public string Basis{ get; set; }
+
+    public void BuildGraphs()
+    {
+        double[,] xyTable = new double[2, amount];
+        for(int i=0; i<amount; i++)
+        {
+            xyTable[0,i] = i+1;
+            xyTable[1,i] = toY(dots[i].transform.position.y);
+        }
+        DrawGraphMNK(BuildCoefs(xyTable));
+        DrawGraphLagrange(xyTable);
     }
 
-	public DotController[] dots;
+    private void DrawGraphMNK(double[] coeffs)
+    {
+        for(double x=0.1;x<5.9;x+=0.1)
+        {
+            double y = 0;
+            for(int i=0;i<basis;++i)
+            {
+                y+=Math.Pow(x, i)*coeffs[i];
+            }
+            Instantiate(DotPrefabMNK, new Vector2(toXReverse(x), toYReverse(y)), Quaternion.identity);
+        }
+    }
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
+    private void DrawGraphLagrange(double[,] xyValues)
+    {
+        for(double x=0.1;x<5.9;x+=0.1)
+        {
+            double y = InterpolateLagrangePolynomial(x, xyValues, amount);
+            Instantiate(DotPrefabLagrange, new Vector2(toXReverse(x), toYReverse(y)), Quaternion.identity);
+        }
+    }
 
-	}
- 
+    private double[] BuildCoefs(double[,] xyTable)
+    {
+        Int32.TryParse(Basis, out basis);
+        if(basis<0)
+            throw new Exception("Basis can't be less than 0!");
+        basis++;
+        this.matrix = MakeSystem(xyTable, basis);
+        return Gauss(basis, basis + 1);
+    }
+
 	private double[,] MakeSystem(double[,] xyTable, int basis)
     {
         double[,] matrix = new double[basis, basis + 1];
@@ -66,7 +103,7 @@ public class MNKBuilder : MonoBehaviour {
         }
         else return null;
     }
- 
+
     private bool GaussDirectPass(int rowCount, int colCount){
         int i, j, k, maxId, tmpInt;
         double maxVal, tmpDouble;
@@ -103,53 +140,53 @@ public class MNKBuilder : MonoBehaviour {
         }
         return true;
     }
- 
-    private double[] GaussReversePass(int colCount, int rowCount){
+
+    private double[] GaussReversePass(int colCount, int rowCount)
+    {
         int i,j,k;
         for (i = rowCount - 1; i >= 0; i--)
+        {
             for (j = i - 1; j >= 0; j--)
             {
                 double tempMn = matrix[j,i];
                 for (k = 0; k < colCount; k++)
                     matrix[j, k] -= matrix[i, k] * tempMn;
             }
+        }
         double[] answer = new double[rowCount];
-        for (i = 0; i < rowCount; i++) answer[mask[i]] = matrix[i, colCount - 1];
+        for (i = 0; i < rowCount; i++)
+            answer[mask[i]] = matrix[i, colCount - 1];
         return answer;
     }
- 
-    public void LeastSquares(){
-        double[] result = BuildCoefs();
-        string str = "";
-        for (int i = 0; i < basis; i++)
-        {
-            str += result[i] + "x^" + i;
-            if(i!=basis-1)
-                str+=" + ";
-        }
-        print(str);
-    }
 
-    private void DrawGraph(){
+    double InterpolateLagrangePolynomial (double x, double[,] xyValues, int size)
+	{
+		double lagrangePol = 0;
+		for (int i = 0; i < size; i++)
+		{
+				double basicsPol = 1;
+				for (int j = 0; j < size; j++)
+				{
+					if (j != i)
+						basicsPol *= (x - xyValues[0, j])/(xyValues[0, i] - xyValues[0, j]);
+				}
+				lagrangePol += basicsPol * xyValues[1, i];
+		}
+		return lagrangePol;
+	}
 
-    }
-
-    private double[] BuildCoefs(){
-        Int32.TryParse(Basis, out basis);
-        if(basis<0)
-            throw new Exception("Basis can't be less than 0!");
-        basis++;
-        double[,] xyTable = new double[2, 5];
-        for(int i=0; i<5; i++)
-        {
-            xyTable[0,i] = i+1;
-            xyTable[1,i] = toY(dots[i].transform.position.y);
-        }
-        this.matrix = MakeSystem(xyTable, basis);
-        return Gauss(basis, basis + 1);
-    }
-
-	double toY(float y){
+	double toY(float y)
+    {
 		return 10 * ((y+2.05)/6.45);
 	}
+
+    float toXReverse(double x)
+    {
+        return (float)x*(1.4f) - 5.25f;
+    }
+
+    float toYReverse(double y)
+    {
+        return (float)y*0.645f - 2.05f;
+    }
 }
